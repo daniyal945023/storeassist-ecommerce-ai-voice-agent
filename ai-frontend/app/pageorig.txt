@@ -1,7 +1,16 @@
-// Add this state near the top of Home() function:
-const [audioMessageId, setAudioMessageId] = useState<string | null>(null);
-
-// Update the handleChatSubmit function:
 
 
-// Update the message rendering logic:
+// Update the chat submission function to handle empty input:
+
+
+// Update the input footer to add voice input button:
+
+
+// Add real-time transcript display when listening:
+{isListening && transcript && (
+  <div className="px-4 pb-2">
+    <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-2">
+      Listening: "{transcript}"
+    </div>
+  </div>
+)}

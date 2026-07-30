@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ingestDocuments, sendAgentMessage, searchDocuments } from '../lib/api';
 import { ChatMessage } from '@/lib/types';
 import { useSpeech } from '@/hooks/useSpeech';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Mic, MicOff } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -42,7 +43,21 @@ import {
 export default function Home() {
   // --- State for Document Ingestion ---
   const [audioMessageId, setAudioMessageId] = useState<string | null>(null);
-  const { speak, isMuted, toggleMute, isPlaying, mode, toggleMode } = useSpeech();
+  
+  // Fixed destructuring - include all needed variables from useSpeech
+  const { 
+    speak, 
+    isMuted, 
+    toggleMute, 
+    isPlaying, 
+    mode, 
+    toggleMode,
+    isListening,
+    transcript,
+    setTranscript,
+    toggleListening
+  } = useSpeech();
+  
   const [voiceMode, setVoiceMode] = useState(false);
   const [docId, setDocId] = useState('');
   const [content, setContent] = useState('');
@@ -65,6 +80,19 @@ export default function Home() {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+
+  // Add event listener for speech results:
+  useEffect(() => {
+    const handleSpeechResult = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      setInputMessage(customEvent.detail);
+    };
+
+    window.addEventListener('speechResult', handleSpeechResult);
+    return () => {
+      window.removeEventListener('speechResult', handleSpeechResult);
+    };
+  }, []);
 
   // Handle Document Upload
   const handleIngestSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -114,13 +142,13 @@ export default function Home() {
   };
 
   // Handle Chat Submit
-  // Replace the existing handleChatSubmit function:
   const handleChatSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!inputMessage.trim() || isSending) return;
+    if ((!inputMessage.trim() && !transcript.trim()) || isSending) return;
 
-    const userText = inputMessage;
+    const userText = inputMessage || transcript;
     setInputMessage('');
+    setTranscript(''); // Clear transcript after submission
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -137,24 +165,18 @@ export default function Home() {
       });
 
       if (mode === 'voice') {
-        // Voice mode: Show glowing sphere animation
         const aiMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
           sender: 'ai',
-          text: '', // No text in voice mode
-          isAudio: true, // Add this flag to indicate audio response
+          text: '',
+          isAudio: true,
         };
         setMessages((prev) => [...prev, aiMsg]);
-        setAudioMessageId(aiMsg.id); // Track the audio message
-
-        // Speak with completion callback to remove the message
+        
         speak(response.response, () => {
-          // Remove the audio message when speech completes
           setMessages((prev) => prev.filter(msg => msg.id !== aiMsg.id));
-          setAudioMessageId(null);
         });
       } else {
-        // Text mode: Show text response
         const aiMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
           sender: 'ai',
@@ -193,7 +215,6 @@ export default function Home() {
               </p>
             </div>
           </div>
-
         </div>
       </header>
 
@@ -375,8 +396,6 @@ export default function Home() {
               Online
             </Badge>
 
-
-
             {/* Chat Message Box */}
             <div className="flex-1 overflow-y-auto p-4">
               <div className="flex flex-col gap-4">
@@ -451,17 +470,39 @@ export default function Home() {
                 className="flex-1 bg-background"
               />
               <Button
+                type="button"
+                variant={isListening ? "default" : "outline"}
+                size="icon"
+                onClick={toggleListening}
+                className="mr-2"
+                aria-label="Toggle voice input"
+              >
+                {isListening ? (
+                  <MicOff className="size-4" />
+                ) : (
+                  <Mic className="size-4" />
+                )}
+              </Button>
+              <Button
                 type="submit"
                 size="icon"
-                disabled={isSending || !inputMessage.trim()}
+                disabled={isSending || (!inputMessage.trim() && !transcript.trim())}
                 aria-label="Send message"
               >
                 <Send className="size-4" />
               </Button>
             </form>
+
+            {isListening && transcript && (
+              <div className="px-4 pb-2">
+                <div className="text-xs text-muted-foreground italic bg-muted/20 rounded-lg p-2">
+                  Listening: {transcript}
+                </div>
+              </div>
+            )}
           </Card>
         </section>
       </main>
-    </div >
+    </div>
   );
 }
