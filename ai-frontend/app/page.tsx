@@ -41,7 +41,9 @@ import {
 
 export default function Home() {
   // --- State for Document Ingestion ---
-  const { speak, isMuted, toggleMute, isPlaying } = useSpeech();
+  const [audioMessageId, setAudioMessageId] = useState<string | null>(null);
+  const { speak, isMuted, toggleMute, isPlaying, mode, toggleMode } = useSpeech();
+  const [voiceMode, setVoiceMode] = useState(false);
   const [docId, setDocId] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('policies');
@@ -65,7 +67,7 @@ export default function Home() {
   const [isSending, setIsSending] = useState(false);
 
   // Handle Document Upload
-  const handleIngestSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleIngestSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!docId || !content) return;
 
@@ -90,7 +92,7 @@ export default function Home() {
   };
 
   // Handle Direct Document Search
-  const handleSearchSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearchSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!searchQuery.trim() || isSearching) return;
 
@@ -112,6 +114,7 @@ export default function Home() {
   };
 
   // Handle Chat Submit
+  // Replace the existing handleChatSubmit function:
   const handleChatSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!inputMessage.trim() || isSending) return;
@@ -133,23 +136,40 @@ export default function Home() {
         message: userText,
       });
 
-      const aiMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: response.response,
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-      speak(response.response);
-    } catch (err: unknown) {
-      const error = err as Error;
-      setMessages((prev) => [
-        ...prev,
-        {
+      if (mode === 'voice') {
+        // Voice mode: Show glowing sphere animation
+        const aiMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
           sender: 'ai',
-          text: `⚠️ Communication error: ${error.message}`,
-        },
-      ]);
+          text: '', // No text in voice mode
+          isAudio: true, // Add this flag to indicate audio response
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+        setAudioMessageId(aiMsg.id); // Track the audio message
+
+        // Speak with completion callback to remove the message
+        speak(response.response, () => {
+          // Remove the audio message when speech completes
+          setMessages((prev) => prev.filter(msg => msg.id !== aiMsg.id));
+          setAudioMessageId(null);
+        });
+      } else {
+        // Text mode: Show text response
+        const aiMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          sender: 'ai',
+          text: response.response,
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      const errorMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: `⚠️ Communication error: ${error.message}`,
+      };
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsSending(false);
     }
@@ -173,7 +193,7 @@ export default function Home() {
               </p>
             </div>
           </div>
-          
+
         </div>
       </header>
 
@@ -333,11 +353,20 @@ export default function Home() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={toggleMute}
+                onClick={toggleMode}
                 className="ml-auto flex items-center gap-1.5 text-xs"
               >
-                {isMuted ? <VolumeX className="size-4 text-muted-foreground" /> : <Volume2 className="size-4 text-primary" />}
-                <span className="hidden sm:inline">{isMuted ? 'Voice Off' : 'Voice On'}</span>
+                {mode === 'voice' ? (
+                  <>
+                    <VolumeX className="size-4 text-muted-foreground" />
+                    <span className="hidden sm:inline">Voice Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="size-4 text-primary" />
+                    <span className="hidden sm:inline">Text Mode</span>
+                  </>
+                )}
                 {isPlaying && <span className="size-2 rounded-full bg-primary animate-ping" />}
               </Button>
             </div>
@@ -345,75 +374,94 @@ export default function Home() {
               <span className="size-1.5 rounded-full bg-primary" />
               Online
             </Badge>
-          
-          
 
-          {/* Chat Message Box */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="flex flex-col gap-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex items-end gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
-                >
-                  {msg.sender === 'ai' && (
+
+
+            {/* Chat Message Box */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="flex flex-col gap-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex items-end gap-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                      }`}
+                  >
+                    {msg.sender === 'ai' && (
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                        <Bot className="size-4 text-primary" />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.sender === 'user'
+                        ? 'rounded-br-sm bg-primary text-primary-foreground'
+                        : 'rounded-bl-sm border bg-muted/50 text-foreground'
+                        } ${msg.isAudio ? 'flex items-center justify-center p-4' : ''}`}
+                    >
+                      {msg.isAudio ? (
+                        // Voice mode: Show glowing sphere animation
+                        <div className="flex flex-col items-center gap-3">
+                          {/* Glowing Sphere */}
+                          <div className="relative">
+                            <div className="size-8 rounded-full bg-primary/20 animate-pulse" />
+                            <div className="absolute inset-0 size-8 rounded-full bg-primary/40 animate-ping" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="size-4 rounded-full bg-primary" />
+                            </div>
+                          </div>
+                          {/* Subtle text hint */}
+                          <div className="text-xs text-muted-foreground opacity-70">
+                            AI is speaking...
+                          </div>
+                        </div>
+                      ) : (
+                        // Text mode: Show text
+                        msg.text
+                      )}
+                    </div>
+                    {msg.sender === 'user' && (
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <User className="size-4 text-muted-foreground" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {isSending && (
+                  <div className="flex items-end gap-2">
                     <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
                       <Bot className="size-4 text-primary" />
                     </div>
-                  )}
-                  <div
-                    className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.sender === 'user'
-                        ? 'rounded-br-sm bg-primary text-primary-foreground'
-                        : 'rounded-bl-sm border bg-muted/50 text-foreground'
-                      }`}
-                  >
-                    {msg.text}
-                  </div>
-                  {msg.sender === 'user' && (
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted">
-                      <User className="size-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" />
+                      Agent is thinking &amp; checking tools...
                     </div>
-                  )}
-                </div>
-              ))}
-              {isSending && (
-                <div className="flex items-end gap-2">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <Bot className="size-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground">
-                    <Loader2 className="size-3.5 animate-spin" />
-                    Agent is thinking &amp; checking tools...
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* Input Footer */}
-          <form onSubmit={handleChatSubmit} className="flex gap-2 bg-muted/30 p-4">
-            <Input
-              type="text"
-              placeholder="Ask about returns, product specs, or order totals with discounts..."
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              className="flex-1 bg-background"
-            />
-            <Button
-              type="submit"
-              size="icon"
-              disabled={isSending || !inputMessage.trim()}
-              aria-label="Send message"
-            >
-              <Send className="size-4" />
-            </Button>
-          </form>
-        </Card>
-      </section>
-    </main>
+            {/* Input Footer */}
+            <form onSubmit={handleChatSubmit} className="flex gap-2 bg-muted/30 p-4">
+              <Input
+                type="text"
+                placeholder="Ask about returns, product specs, or order totals with discounts..."
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                className="flex-1 bg-background"
+              />
+              <Button
+                type="submit"
+                size="icon"
+                disabled={isSending || !inputMessage.trim()}
+                aria-label="Send message"
+              >
+                <Send className="size-4" />
+              </Button>
+            </form>
+          </Card>
+        </section>
+      </main>
     </div >
   );
 }

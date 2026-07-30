@@ -4,9 +4,11 @@
 import { useState, useEffect, useRef } from 'react';
 
 export function useSpeech() {
-  const [isMuted, setIsMuted] = useState(false); // Toggle switch state
+  const [isMuted, setIsMuted] = useState(false);
+  const [mode, setMode] = useState<'voice' | 'text'>('text'); // NEW: voice/text mode // Toggle switch state
   const [isPlaying, setIsPlaying] = useState(false);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+  const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
@@ -14,8 +16,8 @@ export function useSpeech() {
     }
   }, []);
 
-  const speak = (text: string) => {
-    if (!synthRef.current || isMuted || !text) return;
+  const speak = (text: string, onComplete?: () => void) => {
+    if (!synthRef.current || isMuted || mode !== 'voice' || !text) return;
 
     // Stop any ongoing speech before starting new speech
     synthRef.current.cancel();
@@ -28,9 +30,16 @@ export function useSpeech() {
     utterance.pitch = 1.0; // Pitch: 0 to 2.0
 
     utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
-
+    utterance.onend = () => {
+      setIsPlaying(false);
+      onComplete?.();
+    };
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      onComplete?.();
+    };
+    
+    currentUtteranceRef.current = utterance;
     synthRef.current.speak(utterance);
   };
 
@@ -48,5 +57,20 @@ export function useSpeech() {
     setIsMuted(!isMuted);
   };
 
-  return { speak, stop, isMuted, toggleMute, isPlaying };
+  const toggleMode = () => {
+    if (mode === 'voice') {
+      stop(); // Stop audio when switching to text mode
+    }
+    setMode(mode === 'voice' ? 'text' : 'voice');
+  };
+
+  return { 
+    speak, 
+    stop, 
+    isMuted, 
+    toggleMute, 
+    isPlaying,
+    mode,           // NEW: expose mode state
+    toggleMode      // NEW: expose mode toggle
+  };
 }
