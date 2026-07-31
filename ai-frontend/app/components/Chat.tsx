@@ -1,7 +1,7 @@
 // app/components/Chat.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { sendAgentMessage } from '@/lib/api';
 import { useSpeech } from '@/hooks/useSpeech';
 
@@ -32,46 +32,73 @@ export default function ChatBot() {
     }
   }, [messages, speak, isMuted]);
 
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isSending) return;
+
+      const userMsg: LocalMessage = {
+        id: Date.now().toString(),
+        role: 'user',
+        text: text.trim(),
+      };
+
+      setMessages((m) => [...m, userMsg]);
+      setInput(''); // Clear input box
+      setIsSending(true);
+
+      try {
+        const resp = await sendAgentMessage({
+          user_id: 'customer_101',
+          message: userMsg.text,
+        });
+
+        const aiText = resp?.response ?? 'No response from agent.';
+        const aiMsg: LocalMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          text: aiText,
+        };
+
+        setMessages((m) => [...m, aiMsg]);
+      } catch (err: unknown) {
+        const errMsg =
+          err instanceof Error ? `Communication error: ${err.message}` : 'Communication error';
+        const aiMsg: LocalMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          text: errMsg,
+        };
+        setMessages((m) => [...m, aiMsg]);
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [isSending]
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isSending) return;
+    await sendMessage(input);
+  };
 
-    const userMsg: LocalMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      text: input.trim(),
+  // Auto-send message when speech recognition ends
+  useEffect(() => {
+    const handleSpeechResult = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      const transcript = customEvent.detail;
+      if (transcript && !isSending) {
+        setInput(transcript);
+        setTimeout(() => {
+          sendMessage(transcript);
+        }, 500); // 500ms delay before auto-submitting
+      }
     };
 
-    setMessages((m) => [...m, userMsg]);
-    setInput('');
-    setIsSending(true);
-
-    try {
-      const resp = await sendAgentMessage({
-        user_id: 'customer_101',
-        message: userMsg.text,
-      });
-
-      const aiText = resp?.response ?? 'No response from agent.';
-      const aiMsg: LocalMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        text: aiText,
-      };
-      setMessages((m) => [...m, aiMsg]);
-    } catch (err: unknown) {
-      const errMsg =
-        err instanceof Error ? `Communication error: ${err.message}` : 'Communication error';
-      const aiMsg: LocalMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        text: errMsg,
-      };
-      setMessages((m) => [...m, aiMsg]);
-    } finally {
-      setIsSending(false);
-    }
-  };
+    window.addEventListener('speechResult', handleSpeechResult);
+    return () => {
+      window.removeEventListener('speechResult', handleSpeechResult);
+    };
+  }, [isSending, sendMessage]);
 
   return (
     <div className="max-w-2xl mx-auto p-4 flex flex-col h-screen">
