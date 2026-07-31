@@ -40,7 +40,7 @@ llm = ChatOpenAI(
 )
 
 
-# --- Pydantic Data Models ---
+# Pydantic Data Models
 class DocumentModel(BaseModel):
     id: str
     content: str
@@ -59,7 +59,7 @@ class APIResponse(BaseModel):
     response: str
 
 
-# --- FastMCP Tools ---
+# FastMCP Tools
 @mcp.tool()
 def add_data_to_RAG_collection(id: str, content: str, category: str = "general") -> str:
     """Adds product details, policies, or FAQs into the store knowledge base."""
@@ -109,7 +109,7 @@ def calculate_order_total(item_prices: list[float], discount_percent: float = 0.
     )
 
 
-# --- Tool Mapping ---
+#Tool Mapping
 mcp_tools_map = {
     "add_data_to_RAG_collection": add_data_to_RAG_collection,
     "calculate_order_total": calculate_order_total,
@@ -137,7 +137,7 @@ langgraph_tools = [
 llm_with_tools = llm.bind_tools(langgraph_tools)
 
 
-# --- LangGraph Workflow ---
+# LangGraph Workflow
 class AgentState(TypedDict):
     user_id: str
     query: str
@@ -183,7 +183,7 @@ workflow.add_conditional_edges("agent", should_continue_node, {
 agent_app = workflow.compile()
 
 
-# --- FastAPI Endpoints ---
+# FastAPI Endpoints
 @app.post("/api/documents/add")
 async def add_document_endpoint(payload: DocumentModel):
     """Inserts product specs or policy details into ChromaDB."""

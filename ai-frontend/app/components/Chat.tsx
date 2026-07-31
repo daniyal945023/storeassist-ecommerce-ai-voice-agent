@@ -1,4 +1,4 @@
-// app/components/Chat.tsx
+
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -11,7 +11,7 @@ type LocalMessage = {
   text: string;
 };
 
-export default function ChatBot() {
+export default function Chat() {
   const { speak, isMuted, toggleMute, isPlaying } = useSpeech();
 
   const [messages, setMessages] = useState<LocalMessage[]>([

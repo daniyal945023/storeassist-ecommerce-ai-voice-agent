@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { ingestDocuments, sendAgentMessage, searchDocuments } from '../lib/api';
 import { ChatMessage } from '@/lib/types';
 import { useSpeech } from '@/hooks/useSpeech';
-import { Volume2, VolumeX } from 'lucide-react'; // Add icons for voice toggle
+import { Volume2, VolumeX } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -41,10 +41,10 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
-  // --- State for Document Ingestion ---
+  // State for Document Ingestion 
   const [audioMessageId, setAudioMessageId] = useState<string | null>(null);
   
-  // Fixed destructuring - include all needed variables from useSpeech
+  
   const { 
     speak, 
     isMuted, 
@@ -65,12 +65,12 @@ export default function Home() {
   const [ingestStatus, setIngestStatus] = useState<string | null>(null);
   const [isIngesting, setIsIngesting] = useState(false);
 
-  // --- State for Direct Document Search ---
+  // State for Direct Document Search
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
-  // --- State for AI Chat ---
+  // State for AI Chat
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -304,7 +304,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Form 2: Direct Search */}
+          {/* Form 2, Direct Search */}
           <Card className="flex-1">
             <CardHeader className="pb-4">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -427,7 +427,7 @@ export default function Home() {
                               <div className="size-4 rounded-full bg-primary" />
                             </div>
                           </div>
-                          {/* Subtle text hint */}
+                         
                           <div className="text-xs text-muted-foreground opacity-70">
                             AI is speaking...
                           </div>
