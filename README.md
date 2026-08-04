@@ -1,6 +1,6 @@
 # StoreAssistAI — Enterprise Knowledge & Voice Assistant
 
-**StoreAssistAI** is a full-stack, enterprise-grade AI knowledge management platform. It features real-time token streaming, multi-step agent reasoning with LangGraph, Model Context Protocol (FastMCP) tool execution, and an interactive, bi-directional voice interface (Speech-to-Text & Text-to-Speech).
+**StoreAssistAI** is a full-stack, enterprise-grade AI knowledge management platform. It features multi-step agent reasoning with LangGraph, Model Context Protocol (FastMCP) tool execution, and an interactive, bi-directional voice interface (Speech-to-Text & Text-to-Speech).
 
 ---
 
