@@ -40,9 +40,9 @@ RAG(vector search and data ingestion) + calculate_order_total
 
 ## Key Challenges
 
- -State Handling in useSpeech(Web API)
- -Connecting the mcp server to the client and ensuring accuracy in llm tool calling
- -Ensuring proper validation of structured input and output in Typescript and Pydantic(Python)
+ - State Handling in useSpeech(Web API)
+ - Connecting the mcp server to the client and ensuring accuracy in llm tool calling
+ - Ensuring proper validation of structured input and output in Typescript and Pydantic(Python)
 
 
 ---
